@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">HurricaneTracks</string>
+    <string name="title_activity_maps">Hurricane Tracks</string>
+    <string name="app_label">Search</string>
+    <string name="search_hint">Search by storm name...</string>
+    <string name="search">Search</string>
+</resources>

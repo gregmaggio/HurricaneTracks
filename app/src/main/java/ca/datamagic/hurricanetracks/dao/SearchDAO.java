@@ -12,7 +12,7 @@ import ca.datamagic.hurricanetracks.dto.StormKeyDTO;
 
 public class SearchDAO extends BaseDAO {
     public List<StormKeyDTO> search(String searchText) throws IOException, JSONException {
-        String json = get(MessageFormat.format("http://datamagic.ca/Hurricane/api/search/{0}", searchText));
+        String json = get(MessageFormat.format("https://datamagic.ca/Hurricane/api/search/{0}", searchText));
         JSONArray array = new JSONArray(json);
         List<StormKeyDTO> stormKeys = new ArrayList<StormKeyDTO>();
         for (int ii = 0; ii < array.length(); ii++) {

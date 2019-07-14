@@ -12,7 +12,7 @@ import ca.datamagic.hurricanetracks.dto.BasinDTO;
 
 public class BasinDAO extends BaseDAO {
     public List<BasinDTO> basins() throws IOException, JSONException {
-        String json = get("http://datamagic.ca/Hurricane/api/basins");
+        String json = get("https://datamagic.ca/Hurricane/api/basins");
         JSONArray array = new JSONArray(json);
         List<BasinDTO> basins = new ArrayList<BasinDTO>();
         for (int ii = 0; ii < array.length(); ii++) {
@@ -22,7 +22,7 @@ public class BasinDAO extends BaseDAO {
     }
 
     public List<Integer> years(String basin) throws IOException, JSONException {
-        String json = get(MessageFormat.format("http://datamagic.ca/Hurricane/api/basin/{0}/years", basin));
+        String json = get(MessageFormat.format("https://datamagic.ca/Hurricane/api/basin/{0}/years", basin));
         JSONArray array = new JSONArray(json);
         List<Integer> years = new ArrayList<Integer>();
         for (int ii = 0; ii < array.length(); ii++) {

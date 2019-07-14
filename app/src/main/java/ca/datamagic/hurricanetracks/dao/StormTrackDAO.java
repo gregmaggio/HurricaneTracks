@@ -12,7 +12,7 @@ import ca.datamagic.hurricanetracks.dto.StormTrackDTO;
 
 public class StormTrackDAO extends BaseDAO {
     public List<StormTrackDTO> tracks(String basin, Integer year, Integer stormNo) throws IOException, JSONException {
-        String json = get(MessageFormat.format("http://datamagic.ca/Hurricane/api/stormTrack/{0}/{1}/{2}", basin, Integer.toString(year.intValue()), Integer.toString(stormNo.intValue())));
+        String json = get(MessageFormat.format("https://datamagic.ca/Hurricane/api/stormTrack/{0}/{1}/{2}", basin, Integer.toString(year.intValue()), Integer.toString(stormNo.intValue())));
         JSONArray array = new JSONArray(json);
         List<StormTrackDTO> stormTracks = new ArrayList<StormTrackDTO>();
         for (int ii = 0; ii < array.length(); ii++) {

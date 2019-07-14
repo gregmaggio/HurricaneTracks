@@ -162,7 +162,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         try {
             File intPath = getFilesDir();
             String filesPath = intPath.getAbsolutePath();
-            LogFactory.initialize(Level.ALL, filesPath, true);
+            LogFactory.initialize(Level.WARNING, filesPath, true);
         } catch (Throwable t) {
             // Do Nothing
         }

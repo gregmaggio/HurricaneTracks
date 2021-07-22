@@ -1,0 +1,44 @@
+SELECT DISTINCT basin FROM `bigquery-public-data.noaa_hurricanes.hurricanes`
+ORDER BY basin
+
+Basins include:
+NA - North Atlantic
+EP - Eastern North Pacific
+WP - Western North Pacific
+NI - North Indian
+SI - South Indian
+SP - Southern Pacific
+SA - South Atlantic
+MM - Missing - should not appear in final IBTrACS product
+
+SELECT AVG(latitude), AVG(longitude) FROM `bigquery-public-data.noaa_hurricanes.hurricanes`
+WHERE basin = 'NA'
+
+NA - North Atlantic - 27.042943892507832,-64.06562896264852
+EP - Eastern North Pacific - 17.34682960352381,-101.40464744010902
+WP - Western North Pacific - 20.393590910059267,133.57668140439355
+NI - North Indian - 17.770978228587104,81.49652796447191
+SI - South Indian - -17.595758564542496,76.92105309952329
+SP - Southern Pacific - -19.537684973260493,123.76518808351108
+SA - South Atlantic - -25.933099999999992,-41.72111596638654
+
+SELECT DISTINCT season FROM `bigquery-public-data.noaa_hurricanes.hurricanes`
+WHERE basin = 'NA'
+ORDER BY season
+
+SELECT DISTINCT number, name FROM `bigquery-public-data.noaa_hurricanes.hurricanes`
+WHERE basin = 'NA'
+AND season = '2020'
+ORDER BY number
+
+SELECT * FROM `bigquery-public-data.noaa_hurricanes.hurricanes`
+WHERE basin = 'NA'
+AND season = '2020'
+AND number = 57
+ORDER BY iso_time
+
+SELECT number, name, COUNT(iso_time) as tracks FROM `bigquery-public-data.noaa_hurricanes.hurricanes`
+WHERE basin = 'NA'
+AND season = '2020'
+GROUP BY number, name
+ORDER BY number, name

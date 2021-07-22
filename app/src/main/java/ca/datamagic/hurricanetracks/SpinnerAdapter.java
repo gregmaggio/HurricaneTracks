@@ -1,31 +1,32 @@
 package ca.datamagic.hurricanetracks;
 
 import android.content.Context;
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
 
-public class ListViewAdapter extends ArrayAdapter<String> {
-    private String[] _items = null;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
-    public ListViewAdapter(@NonNull Context context, String[] items) {
-        super(context, R.layout.list_item, R.id.item_text);
-        _items = items;
+public class SpinnerAdapter extends ArrayAdapter<String> {
+    private String[] items = null;
+
+    public SpinnerAdapter(@NonNull Context context, @NonNull String[] items) {
+        super(context, R.layout.spinner_item_layout, R.id.spinnerText);
+        this.items = items;
     }
 
     @Override
     public void clear() {
         super.clear();
-        _items = null;
+        this.items = null;
     }
 
     @Override
     public int getCount() {
-        if (_items != null) {
-            return _items.length;
+        if (this.items != null) {
+            return this.items.length;
         }
         return 0;
     }
@@ -33,8 +34,8 @@ public class ListViewAdapter extends ArrayAdapter<String> {
     @Nullable
     @Override
     public String getItem(int position) {
-        if (_items != null) {
-            return _items[position];
+        if (this.items != null) {
+            return this.items[position];
         }
         return null;
     }
@@ -43,7 +44,7 @@ public class ListViewAdapter extends ArrayAdapter<String> {
     @Override
     public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
         View view = super.getView(position, convertView, parent);
-        TextView textView = view.findViewById(R.id.item_text);
+        TextView textView = view.findViewById(R.id.spinnerText);
         textView.setText(getItem(position));
         return view;
     }

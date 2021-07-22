@@ -7,20 +7,24 @@ import ca.datamagic.hurricanetracks.dao.BasinDAO;
 import ca.datamagic.hurricanetracks.logging.LogFactory;
 
 public class YearTask extends AsyncTaskBase<Void, Void, List<Integer>> {
-    private static Logger _logger = LogFactory.getLogger(YearTask.class);
-    private static BasinDAO _dao = new BasinDAO();
-    private String _basin = null;
+    private static final Logger logger = LogFactory.getLogger(YearTask.class);
+    private static BasinDAO dao = new BasinDAO();
+    private String basin = null;
 
     public YearTask(String basin) {
-        _basin = basin;
+        this.basin = basin;
+    }
+
+    public void setBasin(String newVal) {
+        this.basin = newVal;
     }
 
     @Override
     protected AsyncTaskResult<List<Integer>> doInBackground(Void... voids) {
-        _logger.info("Retrieving years...");
+        logger.info("Retrieving years...");
         try {
-            _logger.info("basin: " + _basin);
-            return new AsyncTaskResult<List<Integer>>(_dao.years(_basin));
+            logger.info("basin: " + this.basin);
+            return new AsyncTaskResult<List<Integer>>(dao.years(this.basin));
         } catch (Throwable t) {
             return new AsyncTaskResult<List<Integer>>(t);
         }
@@ -28,7 +32,7 @@ public class YearTask extends AsyncTaskBase<Void, Void, List<Integer>> {
 
     @Override
     protected void onPostExecute(AsyncTaskResult<List<Integer>> result) {
-        _logger.info("...years retrieved.");
+        logger.info("...years retrieved.");
         fireCompleted(result);
     }
 }

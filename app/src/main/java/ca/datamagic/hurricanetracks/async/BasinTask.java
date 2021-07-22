@@ -8,14 +8,14 @@ import ca.datamagic.hurricanetracks.dto.BasinDTO;
 import ca.datamagic.hurricanetracks.logging.LogFactory;
 
 public class BasinTask extends AsyncTaskBase<Void, Void, List<BasinDTO>> {
-    private static Logger _logger = LogFactory.getLogger(BasinTask.class);
-    private static BasinDAO _dao = new BasinDAO();
+    private static final Logger logger = LogFactory.getLogger(BasinTask.class);
+    private static BasinDAO dao = new BasinDAO();
 
     @Override
     protected AsyncTaskResult<List<BasinDTO>> doInBackground(Void... voids) {
-        _logger.info("Retrieving basins...");
+        logger.info("Retrieving basins...");
         try {
-            return new AsyncTaskResult<List<BasinDTO>>(_dao.basins());
+            return new AsyncTaskResult<List<BasinDTO>>(dao.basins());
         } catch (Throwable t) {
             return new AsyncTaskResult<List<BasinDTO>>(t);
         }
@@ -23,7 +23,7 @@ public class BasinTask extends AsyncTaskBase<Void, Void, List<BasinDTO>> {
 
     @Override
     protected void onPostExecute(AsyncTaskResult<List<BasinDTO>> result) {
-        _logger.info("...basins retrieved.");
+        logger.info("...basins retrieved.");
         fireCompleted(result);
     }
 }

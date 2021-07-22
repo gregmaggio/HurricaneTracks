@@ -1,64 +1,61 @@
 package ca.datamagic.hurricanetracks.dto;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 public class StormKeyDTO {
-    private String _stormKey = null;
-    private String _basin = null;
-    private Integer _year = null;
-    private Integer _stormNo = null;
-    private String _stormName = null;
+    private String stormKey = null;
+    private String basin = null;
+    private Integer year = null;
+    private Integer stormNo = null;
+    private String stormName = null;
 
     public StormKeyDTO() {
 
     }
 
-    public StormKeyDTO(JSONObject obj) throws JSONException {
-        _stormKey = obj.getString("stormKey");
-        _basin = obj.getString("basin");
-        _year = obj.getInt("year");
-        _stormNo = obj.getInt("stormNo");
-        _stormName = obj.getString("stormName");
+    public StormKeyDTO(String stormKey, String basin, Integer year, Integer stormNo, String stormName) {
+        this.stormKey = stormKey;
+        this.basin = basin;
+        this.year = year;
+        this.stormNo = stormNo;
+        this.stormName = stormName;
     }
 
     public String getStormKey() {
-        return _stormKey;
+        return this.stormKey;
     }
 
     public String getBasin() {
-        return _basin;
+        return this.basin;
     }
 
     public Integer getYear() {
-        return _year;
+        return this.year;
     }
 
     public Integer getStormNo() {
-        return _stormNo;
+        return this.stormNo;
     }
 
     public String getStormName() {
-        return _stormName;
+        return this.stormName;
     }
 
     public void setStormKey(String newVal) {
-        _stormKey = newVal;
+        this.stormKey = newVal;
     }
 
     public void setBasin(String newVal) {
-        _basin = newVal;
+        this.basin = newVal;
     }
 
     public void setYear(Integer newVal) {
-        _year = newVal;
+        this.year = newVal;
     }
 
     public void setStormNo(Integer newVal) {
-        _stormNo = newVal;
+        this.stormNo = newVal;
     }
 
     public void setStormName(String newVal) {
-        _stormName = newVal;
+        this.stormName = newVal;
     }
 }

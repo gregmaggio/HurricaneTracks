@@ -6,11 +6,14 @@ import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.graphics.Color;
 import android.os.Bundle;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.SearchView;
+
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SearchView;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.widget.AdapterView;
+import android.widget.ProgressBar;
 import android.widget.Spinner;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -25,161 +28,190 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.PolylineOptions;
 
 import java.io.File;
+import java.io.InputStream;
 import java.text.DecimalFormat;
 import java.text.MessageFormat;
 import java.text.NumberFormat;
-import java.util.Enumeration;
-import java.util.Hashtable;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import androidx.appcompat.widget.Toolbar;
 import ca.datamagic.hurricanetracks.async.AsyncTaskListener;
 import ca.datamagic.hurricanetracks.async.AsyncTaskResult;
 import ca.datamagic.hurricanetracks.async.BasinTask;
 import ca.datamagic.hurricanetracks.async.SearchTask;
 import ca.datamagic.hurricanetracks.async.StormTask;
 import ca.datamagic.hurricanetracks.async.StormTrackTask;
+import ca.datamagic.hurricanetracks.async.Workflow;
+import ca.datamagic.hurricanetracks.async.WorkflowListener;
+import ca.datamagic.hurricanetracks.async.WorkflowStep;
 import ca.datamagic.hurricanetracks.async.YearTask;
+import ca.datamagic.hurricanetracks.dao.BaseDAO;
+import ca.datamagic.hurricanetracks.dao.PreferencesDAO;
 import ca.datamagic.hurricanetracks.dto.BasinDTO;
+import ca.datamagic.hurricanetracks.dto.PreferencesDTO;
 import ca.datamagic.hurricanetracks.dto.StormDTO;
 import ca.datamagic.hurricanetracks.dto.StormKeyDTO;
 import ca.datamagic.hurricanetracks.dto.StormTrackDTO;
 import ca.datamagic.hurricanetracks.logging.LogFactory;
+import ca.datamagic.hurricanetracks.util.IOUtils;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMarkerClickListener, GoogleMap.OnMapClickListener, SearchView.OnQueryTextListener, SearchView.OnSuggestionListener, SearchView.OnCloseListener{
-    private static Logger _logger = LogFactory.getLogger(MainActivity.class);
-    private static NumberFormat _dateNumberFormat = null;
-    private Spinner _basin = null;
-    private Spinner _year = null;
-    private Spinner _storm = null;
-    private GoogleMap _map = null;
-    private List<BasinDTO> _basins = null;
-    private String _currentBasin = null;
-    private List<Integer> _currentYears = null;
-    private Integer _currentYear = null;
-    private List<StormDTO> _currentStorms = null;
-    private StormDTO _allStorms = new StormDTO(0, "ALL", 0);
-    private Integer _currentStorm = null;
-    private LatLngBounds.Builder _builder = null;
-    private Hashtable<Integer, Boolean> _loadedStormTracks = new Hashtable<Integer, Boolean>();
-    private Marker _selectedMarker = null;
-    private boolean _processing = false;
-    private SearchManager _manager = null;
-    private SearchView _search = null;
-    private SearchTask _searchTask = null;
+    private static final Logger logger = LogFactory.getLogger(MainActivity.class);
+    private static NumberFormat dateNumberFormat = null;
+    private final BasinDropDownListener basinDropDownListener = new BasinDropDownListener();
+    private Spinner basin = null;
+    private final YearDropDownListener yearDropDownListener = new YearDropDownListener();
+    private Spinner year = null;
+    private final StormDropDownListener stormDropDownListener = new StormDropDownListener();
+    private Spinner storm = null;
+    private GoogleMap map = null;
+    private final RefreshListener refreshListener = new RefreshListener();
+    private BasinTask basinTask = null;
+    private final BasinListener basinListener = new BasinListener();
+    private List<BasinDTO> currentBasins = null;
+    private String currentBasin = null;
+    private YearTask yearTask = null;
+    private final YearListener yearListener = new YearListener();
+    private List<Integer> currentYears = null;
+    private Integer currentYear = null;
+    private StormTask stormTask = null;
+    private final StormListener stormListener = new StormListener();
+    private List<StormDTO> currentStorms = null;
+    private Integer currentStorm = null;
+    private StormTrackTask stormTrackTask = null;
+    private final StormTrackListener stormTrackListener = new StormTrackListener();
+    private List<StormTrackDTO> currentStormTracks = null;
+    private LatLngBounds.Builder builder = null;
+    private Marker selectedMarker = null;
+    private boolean processing = false;
+    private SearchManager manager = null;
+    private SearchView search = null;
+    private SearchTask searchTask = null;
+    private ProgressBar progressBar = null;
 
     static {
-        _dateNumberFormat = new DecimalFormat();
-        _dateNumberFormat.setMinimumIntegerDigits(2);
-        _dateNumberFormat.setMaximumIntegerDigits(2);
+        dateNumberFormat = new DecimalFormat();
+        dateNumberFormat.setMinimumIntegerDigits(2);
+        dateNumberFormat.setMaximumIntegerDigits(2);
     }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        _processing = true;
 
         initializeLogging();
         setContentView(R.layout.main_layout);
 
-        _basin = findViewById(R.id.basin);
-        _basin.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (_processing) {
-                    return;
-                }
-                if (_basin.getSelectedItemPosition() > -1) {
-                    String selectedBasin = _basins.get(_basin.getSelectedItemPosition()).getName();
-                    if (selectedBasin.compareToIgnoreCase(_currentBasin) != 0) {
-                        _currentBasin = selectedBasin;
-                        _currentYear = null;
-                        _currentStorm = null;
-                        _processing = true;
-                        loadYears();
-                    }
-                }
-            }
+        InputStream inputStream = null;
+        try {
+            inputStream = getResources().openRawResource(R.raw.bigquery);
+            BaseDAO.setAppKey(IOUtils.readEntireStream(inputStream));
+        } catch (Throwable t) {
+            logger.warning("Exception: " + t.getMessage());
+        }
+        IOUtils.closeQuietly(inputStream);
 
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
+        Toolbar toolbar = findViewById(R.id.toolbar);
+        setSupportActionBar(toolbar);
+        //getSupportActionBar().setDisplayHomeAsUpEnabled(true);
+        //getSupportActionBar().setHomeButtonEnabled(true);
 
-        _year = findViewById(R.id.year);
-        _year.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (_processing) {
-                    return;
-                }
-                if (_year.getSelectedItemPosition() > -1) {
-                    Integer selectedYear = _currentYears.get(_year.getSelectedItemPosition());
-                    if (selectedYear.intValue() != _currentYear.intValue()) {
-                        _currentYear = selectedYear;
-                        _currentStorm = null;
-                        _processing = true;
-                        loadStorms();
-                    }
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
-
-        _storm = findViewById(R.id.storm);
-        _storm.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
-            @Override
-            public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (_processing) {
-                    return;
-                }
-                if (_storm.getSelectedItemPosition() > -1) {
-                    StormDTO selectedStorm = _currentStorms.get(_storm.getSelectedItemPosition());
-                    if (selectedStorm.getStormNo().intValue() != _currentStorm.intValue()) {
-                        _currentStorm = selectedStorm.getStormNo();
-                        _processing = true;
-                        loadStormTracks();
-                    }
-                }
-            }
-
-            @Override
-            public void onNothingSelected(AdapterView<?> parent) {
-            }
-        });
+        this.basin = findViewById(R.id.basin);
+        this.basin.setOnItemSelectedListener(this.basinDropDownListener);
+        this.year = findViewById(R.id.year);
+        this.year.setOnItemSelectedListener(this.yearDropDownListener);
+        this.storm = findViewById(R.id.storm);
+        this.storm.setOnItemSelectedListener(this.stormDropDownListener);
+        this.progressBar = findViewById(R.id.progressBar);
 
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        loadBasins();
+        this.readPreferences();
+        this.refresh();
     }
 
     private void initializeLogging() {
         try {
             File intPath = getFilesDir();
             String filesPath = intPath.getAbsolutePath();
-            LogFactory.initialize(Level.WARNING, filesPath, true);
+            LogFactory.initialize(Level.ALL, filesPath, true);
         } catch (Throwable t) {
             // Do Nothing
+        }
+    }
+
+    public void readPreferences() {
+        PreferencesDAO dao = new PreferencesDAO(getBaseContext());
+        PreferencesDTO preferences = dao.read();
+        this.currentBasin = preferences.getBasin();
+        this.currentYear = preferences.getYear();
+        this.currentStorm = preferences.getStormNo();
+    }
+
+    public void writePreferences() {
+        PreferencesDAO dao = new PreferencesDAO(getBaseContext());
+        PreferencesDTO preferences = new PreferencesDTO();
+        preferences.setBasin(this.currentBasin);
+        preferences.setYear(this.currentYear);
+        preferences.setStormNo(this.currentStorm);
+        dao.write(preferences);
+    }
+
+    public void refresh() {
+        if (this.processing) {
+            return;
+        }
+        try {
+            this.processing = true;
+            this.basinTask = null;
+            this.yearTask = null;
+            this.stormTask = null;
+            this.stormTrackTask = null;
+            this.progressBar.setVisibility(View.VISIBLE);
+
+            Workflow workflow = new Workflow();
+            if (this.currentBasins == null) {
+                this.basinTask = new BasinTask();
+                workflow.addStep(new WorkflowStep(this.basinTask, this.basinListener));
+            }
+            if (this.currentYears == null) {
+                this.yearTask = new YearTask(this.currentBasin);
+                workflow.addStep(new WorkflowStep(this.yearTask, this.yearListener));
+            }
+            if (this.currentStorms == null) {
+                this.stormTask = new StormTask(this.currentBasin, this.currentYear);
+                workflow.addStep(new WorkflowStep(this.stormTask, this.stormListener));
+            }
+            if (this.currentStormTracks == null) {
+                this.stormTrackTask = new StormTrackTask(this.currentBasin, this.currentYear, this.currentStorm);
+                workflow.addStep(new WorkflowStep(this.stormTrackTask, this.stormTrackListener));
+            }
+            workflow.addListener(this.refreshListener);
+            workflow.start();
+        } catch (Throwable t) {
+            // TODO: Show Error
+            if (logger != null) {
+                logger.log(Level.WARNING, "Unknown Exception in refresh.", t);
+            }
         }
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        _manager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
-        _search = (SearchView) menu.findItem(R.id.search).getActionView();
-        _search.setSearchableInfo(_manager.getSearchableInfo(getComponentName()));
-        _search.setIconified(true);
-        _search.setIconifiedByDefault(true);
-        _search.setFocusable(false);
-        _search.setOnQueryTextListener(this);
-        _search.setOnSuggestionListener(this);
-        _search.setOnCloseListener(this);
+        this.manager = (SearchManager) getSystemService(Context.SEARCH_SERVICE);
+        this.search = (SearchView) menu.findItem(R.id.search).getActionView();
+        this.search.setSearchableInfo(this.manager.getSearchableInfo(getComponentName()));
+        this.search.setIconified(true);
+        this.search.setIconifiedByDefault(true);
+        this.search.setFocusable(false);
+        this.search.setOnQueryTextListener(this);
+        this.search.setOnSuggestionListener(this);
+        this.search.setOnCloseListener(this);
         return true;
     }
 
@@ -194,207 +226,99 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
      */
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        _map = googleMap;
-        _map.setInfoWindowAdapter(new StormInfoWindowAdapter(getBaseContext()));
-        UiSettings settings = _map.getUiSettings();
+        this.map = googleMap;
+        this.map.setInfoWindowAdapter(new StormInfoWindowAdapter(getBaseContext()));
+        UiSettings settings = this.map.getUiSettings();
         settings.setZoomControlsEnabled(true);
-        _processing = false;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        int itemId = item.getItemId();
+        switch (itemId) {
+            case R.id.action_exit:
+                finish();
+                return true;
+        }
+        return super.onOptionsItemSelected(item);
     }
 
     private void loadBasinSpinner() {
         int selectedIndex = -1;
-        String[] basins = new String[_basins.size()];
-        for (int ii = 0; ii < _basins.size(); ii++) {
-            basins[ii] = _basins.get(ii).getName();
-            if (_currentBasin != null) {
-                if (_currentBasin.compareToIgnoreCase(basins[ii]) == 0) {
-                    selectedIndex = ii;
+        String[] basins = new String[0];
+        if (this.currentBasins != null) {
+            basins = new String[this.currentBasins.size()];
+            for (int ii = 0; ii < this.currentBasins.size(); ii++) {
+                String name = this.currentBasins.get(ii).getName();
+                String description = this.currentBasins.get(ii).getDescription();
+                basins[ii] = description;
+                if (this.currentBasin != null) {
+                    if (this.currentBasin.compareToIgnoreCase(name) == 0) {
+                        selectedIndex = ii;
+                    }
                 }
             }
+            if (selectedIndex < 0) {
+                selectedIndex = 0;
+            }
         }
-        loadSpinner(_basin, basins, selectedIndex);
+        loadSpinner(this.basin, basins, selectedIndex);
+        this.currentBasin = null;
+        if ((this.currentBasins != null) && (selectedIndex > -1)) {
+            this.currentBasin = this.currentBasins.get(selectedIndex).getName();
+        }
     }
 
     private void loadYearSpinner() {
         int selectedIndex = -1;
-        String[] years = new String[_currentYears.size()];
-        for (int ii = 0; ii < _currentYears.size(); ii++) {
-            years[ii] = Integer.toString(_currentYears.get(ii).intValue());
-            if (_currentYear != null) {
-                if (_currentYear.intValue() == _currentYears.get(ii).intValue()) {
-                    selectedIndex = ii;
+        String[] years = new String[0];
+        if (this.currentYears != null) {
+            years = new String[this.currentYears.size()];
+            for (int ii = 0; ii < this.currentYears.size(); ii++) {
+                String year = Integer.toString(this.currentYears.get(ii).intValue());
+                years[ii] = year;
+                if (this.currentYear != null) {
+                    if (this.currentYear.intValue() == this.currentYears.get(ii).intValue()) {
+                        selectedIndex = ii;
+                    }
                 }
             }
+            if (selectedIndex < 0) {
+                selectedIndex = this.currentYears.size() - 1;
+            }
         }
-        loadSpinner(_year, years, selectedIndex);
+        loadSpinner(this.year, years, selectedIndex);
+        this.currentYear = null;
+        if ((this.currentYears != null) && (selectedIndex > -1)) {
+            this.currentYear = this.currentYears.get(selectedIndex);
+        }
     }
 
     private void loadStormSpinner() {
         int selectedIndex = -1;
-        String[] storms = new String[_currentStorms.size()];
-        for (int ii = 0; ii < _currentStorms.size(); ii++) {
-            storms[ii] = _currentStorms.get(ii).getStormName();
-            if (_currentStorm != null) {
-                if (_currentStorm.intValue() == _currentStorms.get(ii).getStormNo().intValue()) {
+        String[] storms = new String[this.currentStorms.size()];
+        for (int ii = 0; ii < this.currentStorms.size(); ii++) {
+            storms[ii] = this.currentStorms.get(ii).getStormName();
+            if (this.currentStorm != null) {
+                if (this.currentStorm.intValue() == this.currentStorms.get(ii).getStormNo().intValue()) {
                     selectedIndex = ii;
                 }
             }
         }
-        if (_currentStorm == null) {
-            selectedIndex = 0;
+        if (this.currentStorm == null) {
+            selectedIndex = this.currentStorms.size() - 1;
         }
-        loadSpinner(_storm, storms, selectedIndex);
+        loadSpinner(this.storm, storms, selectedIndex);
+        this.currentStorm = null;
+        if ((this.currentStorms != null) && (selectedIndex > -1)) {
+            this.currentStorm = this.currentStorms.get(selectedIndex).getStormNo();
+        }
     }
 
     private void loadSpinner(Spinner spinner, String[] items, int selectedIndex) {
-        spinner.setAdapter(new ListViewAdapter(getBaseContext(), items));
+        SpinnerAdapter adapter = new SpinnerAdapter(getBaseContext(), items);
+        spinner.setAdapter(adapter);
         spinner.setSelection(selectedIndex);
-    }
-
-    private void setSpinnerSelection(Spinner spinner, String selectionText) {
-        for (int ii = 0; ii < spinner.getAdapter().getCount(); ii++) {
-            if (spinner.getAdapter().getItem(ii).toString().compareToIgnoreCase(selectionText) == 0) {
-                spinner.setSelection(ii);
-                break;
-            }
-        }
-    }
-
-    private void setBasinSelection(String basin) {
-        setSpinnerSelection(_basin, basin);
-    }
-
-    private void setYearSelection(Integer year) {
-        setSpinnerSelection(_year, Integer.toString(year.intValue()));
-    }
-
-    private void setStormSelection(String stormName) {
-        setSpinnerSelection(_storm, stormName);
-    }
-
-    private void loadBasins() {
-        BasinTask task = new BasinTask();
-        task.addListener(new AsyncTaskListener<List<BasinDTO>>() {
-            @Override
-            public void completed(AsyncTaskResult<List<BasinDTO>> result) {
-                try {
-                    if (result.getResult() != null) {
-                        _basins = result.getResult();
-                        if (_currentBasin == null) {
-                            _currentBasin = _basins.get(0).getName();
-                        }
-                        loadBasinSpinner();
-                        loadYears();
-                    } else {
-                        // TODO
-                        _processing = false;
-                    }
-                } catch (Throwable t) {
-                    // TODO
-                    _processing = false;
-                }
-            }
-        });
-        task.execute((Void)null);
-    }
-
-    private void loadYears() {
-        YearTask task = new YearTask(_currentBasin);
-        task.addListener(new AsyncTaskListener<List<Integer>>() {
-            @Override
-            public void completed(AsyncTaskResult<List<Integer>> result) {
-                try {
-                    if (result.getResult() != null) {
-                        _currentYears = result.getResult();
-                        if (_currentYear == null) {
-                            _currentYear = _currentYears.get(_currentYears.size() - 1);
-                        }
-                        loadYearSpinner();
-                        loadStorms();
-                    } else {
-                        // TODO
-                        _processing = false;
-                    }
-                } catch (Throwable t) {
-                    // TODO
-                    _processing = false;
-                }
-            }
-        });
-        task.execute((Void)null);
-    }
-
-    private void loadStorms() {
-        StormTask task = new StormTask(_currentBasin, _currentYear);
-        task.addListener(new AsyncTaskListener<List<StormDTO>>() {
-            @Override
-            public void completed(AsyncTaskResult<List<StormDTO>> result) {
-                try {
-                    if (result.getResult() != null) {
-                        _currentStorms = result.getResult();
-                        _currentStorms.add(0, _allStorms);
-                        if (_currentStorm == null) {
-                            _currentStorm = _currentStorms.get(0).getStormNo();
-                        }
-                        loadStormSpinner();
-                        loadStormTracks();
-                    } else {
-                        // TODO
-                        _processing = false;
-                    }
-                } catch (Throwable t) {
-                    // TODO
-                    _processing = false;
-                }
-            }
-        });
-        task.execute((Void)null);
-    }
-
-    private void loadStormTracks() {
-        _map.clear();
-        _builder = new LatLngBounds.Builder();
-        _loadedStormTracks.clear();
-        _selectedMarker = null;
-        if (_currentStorm.intValue() == 0) {
-            for (int ii = 0; ii < _currentStorms.size(); ii++) {
-                if (_currentStorms.get(ii).getStormNo().intValue() != 0) {
-                    _loadedStormTracks.put(_currentStorms.get(ii).getStormNo(), Boolean.FALSE);
-                    loadStormTracks(_currentStorms.get(ii).getStormNo());
-                }
-            }
-        } else  {
-            _loadedStormTracks.put(_currentStorm, Boolean.FALSE);
-            loadStormTracks(_currentStorm.intValue());
-        }
-    }
-
-    private void loadStormTracks(int stormNo) {
-        StormTrackTask task = new StormTrackTask(_currentBasin, _currentYear, stormNo);
-        task.addListener(new AsyncTaskListener<List<StormTrackDTO>>() {
-            @Override
-            public void completed(AsyncTaskResult<List<StormTrackDTO>> result) {
-                try {
-                    if (result.getResult() != null) {
-                        if (result.getResult().size() > 0) {
-                            setLoaded(result.getResult().get(0).getStormNo());
-                            renderStormTracks(result.getResult());
-                            moveCameraIfAllLoaded();
-                        } else {
-                            // TODO
-                            _processing = false;
-                        }
-                    } else {
-                        // TODO
-                        _processing = false;
-                    }
-                } catch (Throwable t) {
-                    // TODO
-                    _processing = false;
-                }
-            }
-        });
-        task.execute((Void)null);
     }
 
     private void renderStormTracks(List<StormTrackDTO> tracks) {
@@ -403,7 +327,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         polylineOptions.color(Color.BLACK);
         for (int ii = 0; ii < tracks.size(); ii++) {
             StormTrackDTO track = tracks.get(ii);
-            String dateTime = MessageFormat.format("{0}-{1}-{2} {3}:{4}", Integer.toString(track.getYear().intValue()), _dateNumberFormat.format(track.getMonth().longValue()), _dateNumberFormat.format(track.getDay().longValue()), _dateNumberFormat.format(track.getHours().longValue()), _dateNumberFormat.format(track.getMinutes().longValue()));
+            String dateTime = MessageFormat.format("{0}-{1}-{2} {3}:{4}", Integer.toString(track.getYear().intValue()), dateNumberFormat.format(track.getMonth().longValue()), dateNumberFormat.format(track.getDay().longValue()), dateNumberFormat.format(track.getHours().longValue()), dateNumberFormat.format(track.getMinutes().longValue()));
             String status = track.getStatus();
             if (track.getCategory() != null) {
                 status += " (Cat. " + track.getCategory().toString() + ")";
@@ -413,52 +337,37 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
             info.append("Status: " + status + "\n");
             info.append("Wind Speed: " + track.getMaxWindSpeed() + "\n");
             info.append("Pressure: " + track.getMinPressure());
-            LatLng latLng = new LatLng(track.getY(), track.getX());
+            LatLng latLng = new LatLng(track.getLatitude(), track.getLongitude());
             polylineOptions.add(latLng);
             MarkerOptions markerOptions = new MarkerOptions();
             markerOptions.position(latLng);
             markerOptions.title(track.getStormName());
             markerOptions.snippet(info.toString());
-            _map.addMarker(markerOptions);
-            _builder.include(latLng);
+            this.map.addMarker(markerOptions);
+            this.builder.include(latLng);
         }
-        _map.addPolyline(polylineOptions);
+        this.map.addPolyline(polylineOptions);
     }
 
-    private synchronized void setLoaded(Integer stormNo) {
-        _loadedStormTracks.put(stormNo, Boolean.TRUE);
-    }
-
-    private synchronized void moveCameraIfAllLoaded() {
-        boolean allLoaded = true;
-        Enumeration<Boolean> elements = _loadedStormTracks.elements();
-        while (elements.hasMoreElements()) {
-            if (!elements.nextElement().booleanValue()) {
-                allLoaded = false;
-                break;
-            }
-        }
-        if (allLoaded) {
-            _map.moveCamera(CameraUpdateFactory.newLatLngBounds(_builder.build(), 50));
-            _processing = false;
-        }
+    private void moveCamera() {
+        this.map.moveCamera(CameraUpdateFactory.newLatLngBounds(this.builder.build(), 50));
     }
 
     @Override
     public boolean onMarkerClick(Marker marker) {
-        if (_selectedMarker != null) {
-            if (marker.equals(_selectedMarker)) {
-                _selectedMarker = null;
+        if (this.selectedMarker != null) {
+            if (marker.equals(this.selectedMarker)) {
+                this.selectedMarker = null;
                 return true;
             }
         }
-        _selectedMarker = marker;
+        this.selectedMarker = marker;
         return false;
     }
 
     @Override
     public void onMapClick(LatLng latLng) {
-        _selectedMarker = null;
+        this.selectedMarker = null;
     }
 
     @Override
@@ -473,26 +382,26 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public boolean onQueryTextChange(String newText) {
-        if (_processing) {
+        if (this.processing) {
             return true;
         }
         if ((newText == null) || (newText.length() < 1)) {
             return true;
         }
-        if (_searchTask != null) {
+        if (this.searchTask != null) {
             return true;
         }
-        _searchTask = new SearchTask(newText);
-        _searchTask.addListener(new AsyncTaskListener<List<StormKeyDTO>>() {
+        this.searchTask = new SearchTask(newText);
+        this.searchTask.addListener(new AsyncTaskListener<List<StormKeyDTO>>() {
             @Override
             public void completed(AsyncTaskResult<List<StormKeyDTO>> result) {
                 if (result.getThrowable() != null) {
-                    if (_logger != null) {
-                        _logger.log(Level.WARNING, "Error retrieving search results for text.", result.getThrowable());
+                    if (logger != null) {
+                        logger.log(Level.WARNING, "Error retrieving search results for text.", result.getThrowable());
                     }
                 } else {
                     List<StormKeyDTO> searchResults = result.getResult();
-                    _logger.info("searchResults: " + searchResults.size());
+                    logger.info("searchResults: " + searchResults.size());
                     String[] columns = new String[]{"_id", "stormKey", "basin", "year", "stormNo", "stormName"};
                     MatrixCursor cursor = new MatrixCursor(columns);
                     for (int ii = 0; ii < searchResults.size(); ii++) {
@@ -508,12 +417,12 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                                 };
                         cursor.addRow(temp);
                     }
-                    _search.setSuggestionsAdapter(new StormSearchAdapter(getBaseContext(), cursor));
+                    search.setSuggestionsAdapter(new StormSearchAdapter(getBaseContext(), cursor));
                 }
-                _searchTask = null;
+                searchTask = null;
             }
         });
-        _searchTask.execute((Void)null);
+        this.searchTask.execute((Void)null);
         return true;
     }
 
@@ -524,13 +433,13 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public boolean onSuggestionClick(int position) {
-        if (_processing) {
+        if (this.processing) {
             return true;
         }
-        if (_searchTask != null) {
+        if (this.searchTask != null) {
             return true;
         }
-        Object suggestion = _search.getSuggestionsAdapter().getItem(position);
+        Object suggestion = this.search.getSuggestionsAdapter().getItem(position);
         Cursor cursor = (Cursor)suggestion;
         int basinIndex = cursor.getColumnIndex("basin");
         int yearIndex = cursor.getColumnIndex("year");
@@ -541,35 +450,193 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         Integer stormNo = cursor.getInt(stormNoIndex);
         String stormName = cursor.getString(stormNameIndex);
 
-        if (_currentBasin.compareToIgnoreCase(basin) != 0) {
-            setBasinSelection(basin);
-            _currentBasin = basin;
-            _currentYear = year;
-            _currentStorm = stormNo;
-            _processing = true;
-            loadYears();
+        this.currentBasins = null;
+        this.currentBasin = basin;
+        this.currentYears = null;
+        this.currentYear = year;
+        this.currentStorms = null;
+        this.currentStorm = stormNo;
+        this.currentStormTracks = null;
+        refresh();
+        dismissSearch();
+
+        /*
+        if (this.currentBasin.compareToIgnoreCase(basin) != 0) {
+            this.currentBasin = basin;
+            this.currentYear = year;
+            this.currentStorm = stormNo;
+            this.processing = true;
+            refresh();
             dismissSearch();
-        } else if (_currentYear.intValue() != year.intValue()) {
-            setYearSelection(year);
-            _currentYear = year;
-            _currentStorm = stormNo;
-            _processing = true;
-            loadStorms();
+        } else if (this.currentYear.intValue() != year.intValue()) {
+            this.currentYear = year;
+            this.currentStorm = stormNo;
+            this.processing = true;
+            refresh();
             dismissSearch();
-        } else  if (_currentStorm.intValue() != stormNo.intValue()) {
-            setStormSelection(stormName);
-            _currentStorm = stormNo;
-            _processing = true;
-            loadStormTracks();
+        } else  if (this.currentStorm.intValue() != stormNo.intValue()) {
+            this.currentStorm = stormNo;
+            this.processing = true;
+            refresh();
             dismissSearch();
         }
+         */
         return true;
     }
 
     private void dismissSearch() {
-        _search.setIconified(true);
-        _search.setQuery("", false);
-        _search.clearFocus();
-        _search.onActionViewCollapsed();
+        this.search.setIconified(true);
+        this.search.setQuery("", false);
+        this.search.clearFocus();
+        this.search.onActionViewCollapsed();
+    }
+
+    private class BasinDropDownListener implements AdapterView.OnItemSelectedListener {
+        @Override
+        public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+            if (processing) {
+                return;
+            }
+            currentBasin = currentBasins.get(i).getName();
+            currentBasins = null;
+            currentYear = null;
+            currentYears = null;
+            currentStorm = null;
+            currentStorms = null;
+            currentStormTracks = null;
+            refresh();
+        }
+
+        @Override
+        public void onNothingSelected(AdapterView<?> adapterView) {
+
+        }
+    }
+
+    private class YearDropDownListener implements AdapterView.OnItemSelectedListener {
+        @Override
+        public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+            if (processing) {
+                return;
+            }
+            currentYear = currentYears.get(i);
+            currentStorm = null;
+            currentStorms = null;
+            currentStormTracks = null;
+            refresh();
+        }
+
+        @Override
+        public void onNothingSelected(AdapterView<?> adapterView) {
+
+        }
+    }
+
+    private class StormDropDownListener implements AdapterView.OnItemSelectedListener {
+        @Override
+        public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+            if (processing) {
+                return;
+            }
+            currentStorm = currentStorms.get(i).getStormNo();
+            currentStormTracks = null;
+            refresh();
+        }
+
+        @Override
+        public void onNothingSelected(AdapterView<?> adapterView) {
+
+        }
+    }
+
+    private class RefreshListener implements WorkflowListener {
+        @Override
+        public void completed(boolean success) {
+            writePreferences();
+            processing = false;
+            progressBar.setVisibility(View.GONE);
+        }
+    }
+
+    private class BasinListener implements AsyncTaskListener<List<BasinDTO>> {
+        @Override
+        public void completed(AsyncTaskResult<List<BasinDTO>> result) {
+            try {
+                currentBasins = null;
+                if (result.getThrowable() != null) {
+                    logger.warning("Exception in BasinTask: " + result.getThrowable().getMessage());
+                } else {
+                    currentBasins = result.getResult();
+                }
+                loadBasinSpinner();
+                yearTask.setBasin(currentBasin);
+                stormTask.setBasin(currentBasin);
+                stormTrackTask.setBasin(currentBasin);
+            } catch (Throwable t) {
+                logger.warning("Exception in BasinListener: " + t.getMessage());
+            }
+        }
+    }
+
+    private class YearListener implements AsyncTaskListener<List<Integer>> {
+        @Override
+        public void completed(AsyncTaskResult<List<Integer>> result) {
+            try {
+                currentYears = null;
+                if (result.getThrowable() != null) {
+                    logger.warning("Exception in YearTask: " + result.getThrowable().getMessage());
+                } else {
+                    currentYears = result.getResult();
+                }
+                loadYearSpinner();
+                stormTask.setYear(currentYear);
+                stormTrackTask.setYear(currentYear);
+            } catch (Throwable t) {
+                logger.warning("Exception in YearListener: " + t.getMessage());
+            }
+        }
+    }
+
+    private class StormListener implements AsyncTaskListener<List<StormDTO>> {
+        @Override
+        public void completed(AsyncTaskResult<List<StormDTO>> result) {
+            try {
+                currentStorms = null;
+                if (result.getThrowable() != null) {
+                    logger.warning("Exception in StormTask: " + result.getThrowable().getMessage());
+                } else {
+                    currentStorms = result.getResult();
+                }
+                loadStormSpinner();
+                if (currentStorm != null) {
+                    stormTrackTask.setStormNo(currentStorm);
+                }
+            } catch (Throwable t) {
+                logger.warning("Exception in StormListener: " + t.getMessage());
+            }
+        }
+    }
+
+    private class StormTrackListener implements AsyncTaskListener<List<StormTrackDTO>> {
+        @Override
+        public void completed(AsyncTaskResult<List<StormTrackDTO>> result) {
+            try {
+                currentStormTracks = null;
+                if (result.getThrowable() != null) {
+                    logger.warning("Exception in StormTrackTask: " + result.getThrowable().getMessage());
+                } else {
+                    currentStormTracks = result.getResult();
+                }
+                map.clear();
+                builder = new LatLngBounds.Builder();
+                selectedMarker = null;
+                if (currentStormTracks != null) {
+                    renderStormTracks(currentStormTracks);
+                    moveCamera();
+                }
+            } catch (Throwable t) {
+                logger.warning("Exception in StormTrackListener: " + t.getMessage());
+            }
+        }
     }
 }

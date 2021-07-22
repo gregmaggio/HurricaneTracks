@@ -1,8 +1,8 @@
 package ca.datamagic.hurricanetracks.async;
 
 public class AsyncTaskResult<T> {
-    private T _result = null;
-    private Throwable _throwable = null;
+    private T result = null;
+    private Throwable throwable = null;
 
     public AsyncTaskResult() {
         super();
@@ -10,19 +10,19 @@ public class AsyncTaskResult<T> {
 
     public AsyncTaskResult(T result) {
         super();
-        _result = result;
+        this.result = result;
     }
 
     public AsyncTaskResult(Throwable throwable) {
         super();
-        _throwable = throwable;
+        this.throwable = throwable;
     }
 
     public T getResult() {
-        return _result;
+        return this.result;
     }
 
     public Throwable getThrowable() {
-        return _throwable;
+        return this.throwable;
     }
 }

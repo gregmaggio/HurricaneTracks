@@ -8,23 +8,31 @@ import ca.datamagic.hurricanetracks.dto.StormDTO;
 import ca.datamagic.hurricanetracks.logging.LogFactory;
 
 public class StormTask extends AsyncTaskBase<Void, Void, List<StormDTO>> {
-    private static Logger _logger = LogFactory.getLogger(StormTask.class);
-    private static StormDAO _dao = new StormDAO();
-    private String _basin = null;
-    private Integer _year = null;
+    private static final Logger logger = LogFactory.getLogger(StormTask.class);
+    private static StormDAO dao = new StormDAO();
+    private String basin = null;
+    private Integer year = null;
 
     public StormTask(String basin, Integer year) {
-        _basin = basin;
-        _year = year;
+        this.basin = basin;
+        this.year = year;
+    }
+
+    public void setBasin(String newVal) {
+        this.basin = newVal;
+    }
+
+    public void setYear(Integer newVal) {
+        this.year = newVal;
     }
 
     @Override
     protected AsyncTaskResult<List<StormDTO>> doInBackground(Void... voids) {
-        _logger.info("Retrieving storms...");
+        logger.info("Retrieving storms...");
         try {
-            _logger.info("basin: " + _basin);
-            _logger.info("year: " + Integer.toString(_year.intValue()));
-            return new AsyncTaskResult<List<StormDTO>>(_dao.storms(_basin, _year));
+            logger.info("basin: " + this.basin);
+            logger.info("year: " + Integer.toString(this.year.intValue()));
+            return new AsyncTaskResult<List<StormDTO>>(this.dao.storms(this.basin, this.year));
         } catch (Throwable t) {
             return new AsyncTaskResult<List<StormDTO>>(t);
         }
@@ -32,7 +40,7 @@ public class StormTask extends AsyncTaskBase<Void, Void, List<StormDTO>> {
 
     @Override
     protected void onPostExecute(AsyncTaskResult<List<StormDTO>> result) {
-        _logger.info("...storms retrieved.");
+        logger.info("...storms retrieved.");
         fireCompleted(result);
     }
 }

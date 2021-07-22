@@ -1,54 +1,51 @@
 package ca.datamagic.hurricanetracks.dto;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 public class BasinDTO {
-    private String _name = null;
-    private String _description = null;
-    private Double _centerX = null;
-    private Double _centerY = null;
+    private String name = null;
+    private String description = null;
+    private Double centerX = null;
+    private Double centerY = null;
 
     public BasinDTO() {
 
     }
 
-    public BasinDTO(JSONObject obj) throws JSONException {
-        _name = obj.getString("name");
-        _description = obj.getString("description");
-        _centerX = obj.getDouble("centerX");
-        _centerY = obj.getDouble("centerY");
+    public BasinDTO(String name, String description, Double centerX, Double centerY) {
+        this.name = name;
+        this.description = description;
+        this.centerX = centerX;
+        this.centerY = centerY;
     }
 
     public String getName() {
-        return _name;
+        return this.name;
     }
 
     public String getDescription() {
-        return _description;
+        return this.description;
     }
 
     public Double getCenterX() {
-        return _centerX;
+        return this.centerX;
     }
 
     public Double getCenterY() {
-        return _centerY;
+        return this.centerY;
     }
 
     public void setName(String newVal) {
-        _name = newVal;
+        this.name = newVal;
     }
 
     public void setDescription(String newVal) {
-        _description = newVal;
+        this.description = newVal;
     }
 
     public void setCenterX(Double newVal) {
-        _centerX = newVal;
+        this.centerX = newVal;
     }
 
     public void setCenterY(Double newVal) {
-        _centerY = newVal;
+        this.centerY = newVal;
     }
 }

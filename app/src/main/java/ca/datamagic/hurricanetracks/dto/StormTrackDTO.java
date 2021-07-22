@@ -1,216 +1,173 @@
 package ca.datamagic.hurricanetracks.dto;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 public class StormTrackDTO {
-    private Integer _stormNo = null;
-    private String _stormName = null;
-    private Integer _trackNo = null;
-    private Integer _year = null;
-    private Integer _month = null;
-    private Integer _day = null;
-    private Integer _hours = null;
-    private Integer _minutes = null;
-    private String _recordIdentifier = null;
-    private Double _latitude = null;
-    private String _latitudeHemisphere = null;
-    private Double _longitude = null;
-    private String _longitudeHemisphere = null;
-    private Double _maxWindSpeed = null;
-    private Double _minPressure = null;
-    private Double _x = null;
-    private Double _y = null;
-    private String _status = null;
-    private Integer _category = null;
+    private Integer stormNo = null;
+    private String stormName = null;
+    private Integer trackNo = null;
+    private Integer year = null;
+    private Integer month = null;
+    private Integer day = null;
+    private Integer hours = null;
+    private Integer minutes = null;
+    private Integer seconds = null;
+    private Double latitude = null;
+    private Double longitude = null;
+    private Double maxWindSpeed = null;
+    private Double minPressure = null;
+    private String status = null;
+    private Integer category = null;
 
     public StormTrackDTO() {
 
     }
 
-    public StormTrackDTO(JSONObject obj) throws JSONException {
-        _stormNo = obj.getInt("stormNo");
-        _stormName = obj.getString("stormName");
-        _trackNo = obj.getInt("trackNo");
-        _year = obj.getInt("year");
-        _month = obj.getInt("month");
-        _day = obj.getInt("day");
-        _hours = obj.getInt("hours");
-        _minutes = obj.getInt("minutes");
-        _recordIdentifier = obj.getString("recordIdentifier");
-        _latitude = obj.getDouble("latitude");
-        _latitudeHemisphere = obj.getString("latitudeHemisphere");
-        _longitude = obj.getDouble("longitude");
-        _longitudeHemisphere = obj.getString("longitudeHemisphere");
-        _maxWindSpeed = obj.getDouble("maxWindSpeed");
-        _minPressure = obj.getDouble("minPressure");
-        _x = obj.getDouble("x");
-        _y = obj.getDouble("y");
-        _status = obj.getString("status");
-        if (_maxWindSpeed != null) {
-            if ((_maxWindSpeed.intValue() >= 74) && (_maxWindSpeed.intValue() <= 95)) {
-                _category = 1;
-            } else if ((_maxWindSpeed.intValue() >= 96) && (_maxWindSpeed.intValue() <= 110)) {
-                _category = 2;
-            } else if ((_maxWindSpeed.intValue() >= 111) && (_maxWindSpeed.intValue() <= 129)) {
-                _category = 3;
-            } else if ((_maxWindSpeed.intValue() >= 130) && (_maxWindSpeed.intValue() <= 156)) {
-                _category = 4;
-            } else if (_maxWindSpeed.intValue() >= 157) {
-                _category = 5;
+    public StormTrackDTO(Integer stormNo, String stormName, Integer trackNo, Integer year, Integer month, Integer day, Integer hours, Integer minutes, Integer seconds, Double latitude, Double longitude, Double maxWindSpeed, Double minPressure, String status) {
+        this.stormNo = stormNo;
+        this.stormName = stormName;
+        this.trackNo = trackNo;
+        this.year = year;
+        this.month = month;
+        this.day = day;
+        this.hours = hours;
+        this.minutes = minutes;
+        this.seconds = seconds;
+        this.latitude = latitude;
+        this.longitude = longitude;
+        this.maxWindSpeed = maxWindSpeed;
+        this.minPressure = minPressure;
+        this.status = status;
+        if (this.maxWindSpeed != null) {
+            if ((this.maxWindSpeed.intValue() >= 74) && (this.maxWindSpeed.intValue() <= 95)) {
+                this.category = 1;
+            } else if ((this.maxWindSpeed.intValue() >= 96) && (this.maxWindSpeed.intValue() <= 110)) {
+                this.category = 2;
+            } else if ((this.maxWindSpeed.intValue() >= 111) && (this.maxWindSpeed.intValue() <= 129)) {
+                this.category = 3;
+            } else if ((this.maxWindSpeed.intValue() >= 130) && (this.maxWindSpeed.intValue() <= 156)) {
+                this.category = 4;
+            } else if (this.maxWindSpeed.intValue() >= 157) {
+                this.category = 5;
             }
         }
     }
 
     public Integer getStormNo() {
-        return _stormNo;
+        return this.stormNo;
     }
 
     public String getStormName() {
-        return _stormName;
+        return this.stormName;
     }
 
     public Integer getTrackNo() {
-        return _trackNo;
+        return this.trackNo;
     }
 
     public Integer getYear() {
-        return _year;
+        return this.year;
     }
 
     public Integer getMonth() {
-        return _month;
+        return this.month;
     }
 
     public Integer getDay() {
-        return _day;
+        return this.day;
     }
 
     public Integer getHours() {
-        return _hours;
+        return this.hours;
     }
 
     public Integer getMinutes() {
-        return _minutes;
+        return this.minutes;
     }
 
-    public String getRecordIdentifier() {
-        return _recordIdentifier;
+    public Integer getSeconds() {
+        return this.seconds;
     }
 
     public Double getLatitude() {
-        return _latitude;
-    }
-
-    public String getLatitudeHemisphere() {
-        return _latitudeHemisphere;
+        return this.latitude;
     }
 
     public Double getLongitude() {
-        return _longitude;
-    }
-
-    public String getLongitudeHemisphere() {
-        return _longitudeHemisphere;
+        return this.longitude;
     }
 
     public Double getMaxWindSpeed() {
-        return _maxWindSpeed;
+        return this.maxWindSpeed;
     }
 
     public Double getMinPressure() {
-        return _minPressure;
-    }
-
-    public Double getX() {
-        return _x;
-    }
-
-    public Double getY() {
-        return _y;
+        return this.minPressure;
     }
 
     public String getStatus() {
-        return _status;
+        return this.status;
     }
 
     public Integer getCategory() {
-        return _category;
+        return this.category;
     }
 
     public void setStormNo(Integer newVal) {
-        _stormNo = newVal;
+        this.stormNo = newVal;
     }
 
     public void setStormName(String newVal) {
-        _stormName = newVal;
+        this.stormName = newVal;
     }
 
     public void setTrackNo(Integer newVal) {
-        _trackNo = newVal;
+        this.trackNo = newVal;
     }
 
     public void setYear(Integer newVal) {
-        _year = newVal;
+        this.year = newVal;
     }
 
     public void setMonth(Integer newVal) {
-        _month = newVal;
+        this.month = newVal;
     }
 
     public void setDay(Integer newVal) {
-        _day = newVal;
+        this.day = newVal;
     }
 
     public void setHours(Integer newVal) {
-        _hours = newVal;
+        this.hours = newVal;
     }
 
     public void setMinutes(Integer newVal) {
-        _minutes = newVal;
+        this.minutes = newVal;
     }
 
-    public void setRecordIdentifier(String newVal) {
-        _recordIdentifier = newVal;
+    public void setSeconds(Integer newVal) {
+        this.seconds = newVal;
     }
 
     public void setLatitude(Double newVal) {
-        _latitude = newVal;
-    }
-
-    public void setLatitudeHemisphere(String newVal) {
-        _latitudeHemisphere = newVal;
+        this.latitude = newVal;
     }
 
     public void setLongitude(Double newVal) {
-        _longitude = newVal;
-    }
-
-    public void setLongitudeHemisphere(String newVal) {
-        _longitudeHemisphere = newVal;
+        this.longitude = newVal;
     }
 
     public void setMaxWindSpeed(Double newVal) {
-        _maxWindSpeed = newVal;
+        this.maxWindSpeed = newVal;
     }
 
     public void setMinPressure(Double newVal) {
-        _minPressure = newVal;
-    }
-
-    public void setX(Double newVal) {
-        _x = newVal;
-    }
-
-    public void setY(Double newVal) {
-        _y = newVal;
+        this.minPressure = newVal;
     }
 
     public void setStatus(String newVal) {
-        _status = newVal;
+        this.status = newVal;
     }
 
     public void setCategory(Integer newVal) {
-        _category = newVal;
+        this.category = newVal;
     }
 }

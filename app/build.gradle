@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 29
+    compileSdkVersion 32
     defaultConfig {
         applicationId "ca.datamagic.hurricanetracks"
         minSdkVersion 21
-        targetSdkVersion 29
-        versionCode 8
-        versionName "1.7"
+        targetSdkVersion 32
+        versionCode 9
+        versionName "1.8"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
